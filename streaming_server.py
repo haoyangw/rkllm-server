@@ -43,7 +43,7 @@ USER_TURN_START = b"<|im_start|>user\n"
 USER_TURN_END = b"<|im_end|>\n"
 ASSISTANT_TURN_START = b"<|im_start|>assistant\n"
 ASSISTANT_TURN_END = b"<|im_end|>\n"
-DEFAULT_SYSTEM_MESSAGE = "You are a helpful assistant."
+DEFAULT_SYSTEM_MESSAGE = SYSTEM_PROMPT
 
 stream_token_queue = queue.Queue()
 
@@ -111,10 +111,9 @@ def init_rkllm_model():
     if not os.path.exists(model_canonical_path): print(f"Error: Model file not found: '{model_canonical_path}'"); return False
     
     rkllm_params_global.model_path = model_canonical_path.encode('utf-8')
-    rkllm_params_global.use_gpu = True
-    rkllm_params_global.max_context_len = 30000 
-    rkllm_params_global.n_keep = 32
-    if rkllm_params_global.max_new_tokens == 0: rkllm_params_global.max_new_tokens = 512
+    rkllm_params_global.max_context_len = MAX_CONTEXT_LENGTH
+    rkllm_params_global.n_keep = N_KEEP
+    rkllm_params_global.max_new_tokens = MAX_NEW_TOKENS
     
     # --- SETTING is_async TO FALSE (like manufacturer's example) ---
     rkllm_params_global.is_async = False 
@@ -127,7 +126,6 @@ def init_rkllm_model():
           f"  Max Context: {rkllm_params_global.max_context_len}\n"
           f"  Max New Tokens: {rkllm_params_global.max_new_tokens}\n"
           f"  N_Keep: {rkllm_params_global.n_keep}\n"
-          f"  Use GPU: {rkllm_params_global.use_gpu}\n"
           f"  Is Async (Library Flag): {rkllm_params_global.is_async}") # Log async setting
     
     ret = rkllm_lib.rkllm_init(ctypes.byref(llm_handle), ctypes.byref(rkllm_params_global), api_llm_callback)
@@ -326,7 +324,7 @@ def chat_completions_handler():
 if __name__ == '__main__':
     if init_rkllm_model():
         print("Starting Flask server for RKLLM OpenAI-compliant API on http://0.0.0.0:5001/v1/chat/completions")
-        app.run(host='0.0.0.0', port=5001, threaded=True, debug=False) 
+        app.run(host=SERVER_HOST, port=SERVER_PORT, threaded=True, debug=False) 
     else:
         print("Failed to initialize RKLLM model. Server not starting.")
 
