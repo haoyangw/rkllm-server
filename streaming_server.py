@@ -25,18 +25,150 @@ LLM_RUN_NORMAL = 0
 LLM_RUN_FINISH = 1
 LLM_RUN_WAITING = 2
 LLM_RUN_ERROR = 3
-RKLLM_INPUT_PROMPT = 0
-RKLLM_INFER_GENERATE = 0
+
+RKLLMInputType = ctypes.c_int
+RKLLMInputType.RKLLM_INPUT_PROMPT      = 0
+RKLLMInputType.RKLLM_INPUT_TOKEN       = 1
+RKLLMInputType.RKLLM_INPUT_EMBED       = 2
+RKLLMInputType.RKLLM_INPUT_MULTIMODAL  = 3
+
+RKLLMInferMode = ctypes.c_int
+RKLLMInferMode.RKLLM_INFER_GENERATE = 0
+RKLLMInferMode.RKLLM_INFER_GET_LAST_HIDDEN_LAYER = 1
+RKLLMInferMode.RKLLM_INFER_GET_LOGITS = 2
 
 class RKLLMExtendParam(ctypes.Structure):
-    _fields_ = [("base_domain_id", ctypes.c_int32), ("embed_flash", ctypes.c_int8), ("enabled_cpus_num", ctypes.c_int8), ("enabled_cpus_mask", ctypes.c_uint32)]
+    _fields_ = [
+        ("base_domain_id", ctypes.c_int32),
+        ("embed_flash", ctypes.c_int8),
+        ("enabled_cpus_num", ctypes.c_int8),
+        ("enabled_cpus_mask", ctypes.c_uint32),
+        ("n_batch", ctypes.c_uint8),
+        ("use_cross_attn", ctypes.c_int8),
+        ("reserved", ctypes.c_uint8 * 104)
+    ]
+
 class RKLLMParam(ctypes.Structure):
-    _fields_ = [("model_path", ctypes.c_char_p), ("num_npu_core", ctypes.c_int32), ("use_gpu", ctypes.c_bool), ("max_context_len", ctypes.c_int32), ("max_new_tokens", ctypes.c_int32), ("top_k", ctypes.c_int32), ("top_p", ctypes.c_float), ("temperature", ctypes.c_float), ("repeat_penalty", ctypes.c_float), ("frequency_penalty", ctypes.c_float), ("mirostat", ctypes.c_int32), ("mirostat_tau", ctypes.c_float), ("mirostat_eta", ctypes.c_float), ("skip_special_token", ctypes.c_bool), ("is_async", ctypes.c_bool), ("img_start", ctypes.c_char_p), ("img_end", ctypes.c_char_p), ("img_content", ctypes.c_char_p), ("extend_param", RKLLMExtendParam), ("n_keep", ctypes.c_int32)]
-class RKLLMResult(ctypes.Structure): _fields_ = [("text", ctypes.c_char_p), ("token_id", ctypes.c_int32)]
-class _RKLLMInputUnion(ctypes.Union): _fields_ = [("prompt_input", ctypes.c_char_p)]
-class RKLLMInput(ctypes.Structure): _anonymous_ = ("_input_data",); _fields_ = [("input_type", ctypes.c_int), ("_input_data", _RKLLMInputUnion)]
-class RKLLMInferParam(ctypes.Structure): _fields_ = [("mode", ctypes.c_int), ("lora_params", ctypes.c_void_p), ("prompt_cache_params", ctypes.c_void_p), ("keep_history", ctypes.c_int)]
-LLMResultCallback = ctypes.CFUNCTYPE(None, ctypes.POINTER(RKLLMResult), ctypes.c_void_p, ctypes.c_int)
+    _fields_ = [
+        ("model_path", ctypes.c_char_p),
+        ("max_context_len", ctypes.c_int32),
+        ("max_new_tokens", ctypes.c_int32),
+        ("top_k", ctypes.c_int32),
+        ("n_keep", ctypes.c_int32),
+        ("top_p", ctypes.c_float),
+        ("temperature", ctypes.c_float),
+        ("repeat_penalty", ctypes.c_float),
+        ("frequency_penalty", ctypes.c_float),
+        ("presence_penalty", ctypes.c_float),
+        ("mirostat", ctypes.c_int32),
+        ("mirostat_tau", ctypes.c_float),
+        ("mirostat_eta", ctypes.c_float),
+        ("skip_special_token", ctypes.c_bool),
+        ("is_async", ctypes.c_bool),
+        ("img_start", ctypes.c_char_p),
+        ("img_end", ctypes.c_char_p),
+        ("img_content", ctypes.c_char_p),
+        ("extend_param", RKLLMExtendParam),
+    ]
+
+class RKLLMLoraAdapter(ctypes.Structure):
+    _fields_ = [
+        ("lora_adapter_path", ctypes.c_char_p),
+        ("lora_adapter_name", ctypes.c_char_p),
+        ("scale", ctypes.c_float)
+    ]
+
+class RKLLMEmbedInput(ctypes.Structure):
+    _fields_ = [
+        ("embed", ctypes.POINTER(ctypes.c_float)),
+        ("n_tokens", ctypes.c_size_t)
+    ]
+
+class RKLLMTokenInput(ctypes.Structure):
+    _fields_ = [
+        ("input_ids", ctypes.POINTER(ctypes.c_int32)),
+        ("n_tokens", ctypes.c_size_t)
+    ]
+
+class RKLLMMultiModelInput(ctypes.Structure):
+    _fields_ = [
+        ("prompt", ctypes.c_char_p),
+        ("image_embed", ctypes.POINTER(ctypes.c_float)),
+        ("n_image_tokens", ctypes.c_size_t),
+        ("n_image", ctypes.c_size_t),
+        ("image_width", ctypes.c_size_t),
+        ("image_height", ctypes.c_size_t)
+    ]
+
+class RKLLMInputUnion(ctypes.Union):
+    _fields_ = [
+        ("prompt_input", ctypes.c_char_p),
+        ("embed_input", RKLLMEmbedInput),
+        ("token_input", RKLLMTokenInput),
+        ("multimodal_input", RKLLMMultiModelInput)
+    ]
+
+class RKLLMInput(ctypes.Structure):
+    _fields_ = [
+        ("role", ctypes.c_char_p),
+        ("enable_thinking", ctypes.c_bool),
+        ("input_type", RKLLMInputType),
+        ("input_data", RKLLMInputUnion)
+    ]
+
+class RKLLMLoraParam(ctypes.Structure):
+    _fields_ = [
+        ("lora_adapter_name", ctypes.c_char_p)
+    ]
+
+class RKLLMPromptCacheParam(ctypes.Structure):
+    _fields_ = [
+        ("save_prompt_cache", ctypes.c_int),
+        ("prompt_cache_path", ctypes.c_char_p)
+    ]
+
+class RKLLMInferParam(ctypes.Structure):
+    _fields_ = [
+        ("mode", RKLLMInferMode),
+        ("lora_params", ctypes.POINTER(RKLLMLoraParam)),
+        ("prompt_cache_params", ctypes.POINTER(RKLLMPromptCacheParam)),
+        ("keep_history", ctypes.c_int)
+    ]
+
+class RKLLMResultLastHiddenLayer(ctypes.Structure):
+    _fields_ = [
+        ("hidden_states", ctypes.POINTER(ctypes.c_float)),
+        ("embd_size", ctypes.c_int),
+        ("num_tokens", ctypes.c_int)
+    ]
+
+class RKLLMResultLogits(ctypes.Structure):
+    _fields_ = [
+        ("logits", ctypes.POINTER(ctypes.c_float)),
+        ("vocab_size", ctypes.c_int),
+        ("num_tokens", ctypes.c_int)
+    ]
+
+class RKLLMPerfStat(ctypes.Structure):
+    _fields_ = [
+        ("prefill_time_ms", ctypes.c_float),
+        ("prefill_tokens", ctypes.c_int),
+        ("generate_time_ms", ctypes.c_float),
+        ("generate_tokens", ctypes.c_int),
+        ("memory_usage_mb", ctypes.c_float)
+    ]
+
+class RKLLMResult(ctypes.Structure):
+    _fields_ = [
+        ("text", ctypes.c_char_p),
+        ("token_id", ctypes.c_int),
+        ("last_hidden_layer", RKLLMResultLastHiddenLayer),
+        ("logits", RKLLMResultLogits),
+        ("perf", RKLLMPerfStat)
+    ]
+    
+LLMResultCallback = ctypes.CFUNCTYPE(None, ctypes.POINTER(RKLLMResult),
+    ctypes.c_void_p, ctypes.c_int)
 
 SYS_PROMPT_TEMPLATE = b"<|im_start|>system\n{system_message}<|im_end|>\n"
 USER_TURN_START = b"<|im_start|>user\n"
@@ -205,11 +337,13 @@ def chat_completions_handler():
         # For threaded calls, they must persist until the thread is done.
         # ctypes.byref creates a light-weight pointer. The original Python objects must be kept alive.
         rkllm_input_obj = RKLLMInput() 
-        rkllm_input_obj.input_type = RKLLM_INPUT_PROMPT
-        rkllm_input_obj.prompt_input = ctypes.c_char_p(prompt_for_llm)
+        rkllm_input_obj.role = "user".encode('utf-8')
+        rkllm_input_obj.enable_thinking = ctypes.c_bool(False)
+        rkllm_input_obj.input_mode = RKLLMInputType.RKLLM_INPUT_PROMPT
+        rkllm_input_obj.input_data.prompt_input = ctypes.c_char_p(prompt_for_llm)
         
         rkllm_infer_params_obj = RKLLMInferParam()
-        rkllm_infer_params_obj.mode = RKLLM_INFER_GENERATE
+        rkllm_infer_params_obj.mode = RKLLMInferMode.RKLLM_INFER_GENERATE
         rkllm_infer_params_obj.keep_history = 1
         
         request_id = f"chatcmpl-{uuid.uuid4().hex}"
