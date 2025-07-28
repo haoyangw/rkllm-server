@@ -242,6 +242,15 @@ def init_rkllm_model():
     model_canonical_path = os.path.normpath(model_abs_path)
     if not os.path.exists(model_canonical_path): print(f"Error: Model file not found: '{model_canonical_path}'"); return False
     
+    rkllm_params_global.top_k = 64
+    rkllm_params_global.top_p = 0.95
+    rkllm_params_global.temperature = 0.7
+    rkllm_params_global.repeat_penalty = 1.0
+    rkllm_params_global.frequency_penalty = 1.0
+    rkllm_params_global.presence_penalty = 0.0
+    rkllm_params_global.mirostat = 0
+    rkllm_params_global.mirostat_tau = 5.0
+    rkllm_params_global.mirostat_eta = 0.1
     rkllm_params_global.model_path = model_canonical_path.encode('utf-8')
     rkllm_params_global.max_context_len = MAX_CONTEXT_LENGTH
     rkllm_params_global.n_keep = N_KEEP
