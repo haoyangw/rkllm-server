@@ -170,11 +170,11 @@ class RKLLMResult(ctypes.Structure):
 LLMResultCallback = ctypes.CFUNCTYPE(None, ctypes.POINTER(RKLLMResult),
     ctypes.c_void_p, ctypes.c_int)
 
-SYS_PROMPT_TEMPLATE = b"<|im_start|>system\n{system_message}<|im_end|>\n"
-USER_TURN_START = b"<|im_start|>user\n"
-USER_TURN_END = b"<|im_end|>\n"
-ASSISTANT_TURN_START = b"<|im_start|>assistant\n"
-ASSISTANT_TURN_END = b"<|im_end|>\n"
+SYS_PROMPT_TEMPLATE = b"<bos>{system_message}"
+USER_TURN_START = b"<start_of_turn>user\n"
+USER_TURN_END = b"<end_of_turn>\n"
+ASSISTANT_TURN_START = b"<start_of_turn>model\n"
+ASSISTANT_TURN_END = b"<end_of_turn>\n"
 DEFAULT_SYSTEM_MESSAGE = SYSTEM_PROMPT
 
 stream_token_queue = queue.Queue()
