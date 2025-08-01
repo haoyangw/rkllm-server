@@ -21,7 +21,7 @@ USE_GPU = True
 IS_ASYNC = False
 
 # System Prompt (if any)
-SYSTEM_PROMPT = "You are a helpful assistant."
+SYSTEM_PROMPT = "<start_of_turn>user\nHello!<end_of_turn>\n<start_of_turn>model\nHey there!<end_of_turn>\n<start_of_turn>user\nWhat is 1+1?<end_of_turn>\n<start_of_turn>model\n"
 
 # Debug Configuration
 DEBUG_MODE = False

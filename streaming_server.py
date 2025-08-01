@@ -272,6 +272,18 @@ def init_rkllm_model():
     ret = rkllm_lib.rkllm_init(ctypes.byref(llm_handle), ctypes.byref(rkllm_params_global), api_llm_callback)
     if ret != 0: print(f"Error: rkllm_init failed (code {ret})."); return False
     
+    # Apply Gemma 3-specific chat template
+    # -Chat template based on GitHub comment https://github.com/airockchip/rknn-llm/issues/240#issuecomment-2831806613
+    # -System prompt based on chat template at https://docs.unsloth.ai/basics/tutorials-how-to-fine-tune-and-run-llms/gemma-3-how-to-run-and-fine-tune
+    system_prompt = "<bos><start_of_turn>user\nHello!<end_of_turn>\n<start_of_turn>model\nHey there!<end_of_turn>\n<start_of_turn>user\nWhat is 1+1?<end_of_turn>\n<start_of_turn>model\n"
+    prompt_prefix = "<start_of_turn>user\n"
+    prompt_postfix = "<end_of_turn>\n<start_of_turn>model\n"
+    rkllm_lib.rkllm_set_chat_template(
+        llm_handle, 
+        ctypes.c_char_p(system_prompt.encode('utf-8')), 
+        ctypes.c_char_p(prompt_prefix.encode('utf-8')), 
+        ctypes.c_char_p(prompt_postfix.encode('utf-8')))
+    
     conversation_history_bytes = SYS_PROMPT_TEMPLATE.replace(b"{system_message}", DEFAULT_SYSTEM_MESSAGE.encode('utf-8'))
     model_initialized = True
     print("RKLLM model initialized.")
